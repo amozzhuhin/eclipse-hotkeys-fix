@@ -48,22 +48,78 @@ static GdkEventHandlerSet gdk_event_handler_set_orig = NULL;
  */
 static GdkEventFunc gdk_event_handler = NULL;
 
+/**
+ * Key group of Latin layout
+ */
+static gint latin_key_group = -1;
+
 //
 // Private Services
 //
 
-static gboolean is_latin_keyval(guint keyval)
+/**
+ * Determine key group of Latin layout
+ * @return Latin key group
+ */
+static gint get_latin_key_group(void)
 {
-	return ((GDK_0 <= keyval && keyval <= GDK_9)
-			|| (GDK_A <= keyval && keyval <= GDK_Z)
-			|| (GDK_a <= keyval && keyval <= GDK_z));
+	gint result = 0;
+	GArray *group_keys_count = g_array_new(FALSE, TRUE, sizeof(gint));
+
+	// count all key groups for Latin alphabet
+	for (guint keycode = GDK_KEY_a; keycode <= GDK_KEY_z; keycode++)
+	{
+		GdkKeymapKey* keys;
+		gint n_keys;
+		if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), GDK_KEY_A, &keys, &n_keys))
+		{
+			for (gint key = 0; key < n_keys; key++)
+			{
+				if (keys->group >= 0 && (guint) keys->group >= group_keys_count->len)
+					g_array_set_size(group_keys_count, keys->group + 1);
+			}
+			g_array_index(group_keys_count, gint, keys->group)++;
+			g_free(keys);
+		}
+	}
+
+	// group with maximum keys count is Latin
+	int max_keys_count = 0;
+	for (guint group = 0; group < group_keys_count->len; group++)
+	{
+		if (g_array_index(group_keys_count, gint, group) > max_keys_count)
+		{
+			result = group;
+			max_keys_count = g_array_index(group_keys_count, gint, group);
+		}
+	}
+
+	g_array_free(group_keys_count, TRUE);
+
+	return result;
 }
 
+static void on_gdk_keys_changed(GdkKeymap *keymap, gpointer user_data)
+{
+	PRINT_DEBUG("on_gdk_keys_changed\n");
+	latin_key_group = get_latin_key_group();
+	PRINT_DEBUG("Latin key group is %d\n", latin_key_group);
+}
+
+/**
+ * Key events filter. Replace key group and keyval with Latin equivalents when key pressed with Alt or Ctrl modifiers.
+ */
 static void key_events_hook(GdkEvent *event, gpointer data)
 {
 	if (event->type == GDK_KEY_PRESS || event->type == GDK_KEY_RELEASE)
 	{
-		if ((event->key.state & GDK_CONTROL_MASK) && !event->key.is_modifier && !is_latin_keyval(event->key.keyval))
+		if (latin_key_group == -1)
+		{
+			latin_key_group = get_latin_key_group();
+			PRINT_DEBUG("Latin key group is %d\n", latin_key_group);
+			g_signal_connect(G_OBJECT(gdk_keymap_get_default()), "keys-changed", G_CALLBACK(on_gdk_keys_changed), NULL);
+		}
+		if ((event->key.state & GDK_CONTROL_MASK) && !event->key.is_modifier && event->key.group != latin_key_group)
 		{
 			PRINT_DEBUG("non-Latin hotkey event with keyval=%d\n", event->key.keyval);
 			GdkKeymapKey *keys;
@@ -79,7 +135,8 @@ static void key_events_hook(GdkEvent *event, gpointer data)
 				gint i;
 				for (i = 0; i < n_entries; i++)
 				{
-					if (keys[i].group != event->key.group && keys[i].level == level	&& is_latin_keyval(keyvals[i]))
+					PRINT_DEBUG("group: %d, level: %d, keycode: %d\n", keys[i].group, keys[i].level, keys[i].keycode);
+					if (keys[i].group == latin_key_group && keys[i].level == level)
 					{
 						// found Latin key - modify event data
 						PRINT_DEBUG("found Latin keyval=%d\n", keyvals[i]);
@@ -103,11 +160,15 @@ static void key_events_hook(GdkEvent *event, gpointer data)
 // Public Services
 //
 
+/**
+ * Hook of GDK gdk_event_handler_set function
+ */
 void gdk_event_handler_set(GdkEventFunc func, gpointer data, GDestroyNotify notify)
 {
 	PRINT_DEBUG("enter in gdk_event_handler_set(%p, %p, %p)\n", func, data, notify);
 	if (gdk_event_handler_set_orig == NULL)
 	{
+		// search for original 'gdk_event_handler_set'
 		gdk_event_handler_set_orig = dlsym(RTLD_NEXT, "gdk_event_handler_set");
 		PRINT_DEBUG("found original gdk_event_handler_set at %p\n", gdk_event_handler_set_orig);
 	}

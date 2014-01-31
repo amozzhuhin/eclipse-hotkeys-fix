@@ -4,6 +4,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(GDK2 REQUIRED gdk-2.0)
 pkg_check_modules(GTK2 REQUIRED gtk+-2.0)
 
+set(CMAKE_C_FLAGS -std=c99)
+
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wformat-y2k -Winit-self")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes -Winline -Wnested-externs -Wbad-function-cast -Wshadow")
 
