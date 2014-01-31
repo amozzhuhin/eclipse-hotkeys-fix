@@ -119,7 +119,8 @@ static void key_events_hook(GdkEvent *event, gpointer data)
 			PRINT_DEBUG("Latin key group is %d\n", latin_key_group);
 			g_signal_connect(G_OBJECT(gdk_keymap_get_default()), "keys-changed", G_CALLBACK(on_gdk_keys_changed), NULL);
 		}
-		if ((event->key.state & GDK_CONTROL_MASK) && !event->key.is_modifier && event->key.group != latin_key_group)
+		if ((event->key.state & (GDK_CONTROL_MASK | GDK_MOD1_MASK)) && !event->key.is_modifier
+				&& event->key.group != latin_key_group)
 		{
 			PRINT_DEBUG("non-Latin hotkey event with keyval=%d\n", event->key.keyval);
 			GdkKeymapKey *keys;
