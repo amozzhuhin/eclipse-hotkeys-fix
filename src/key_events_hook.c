@@ -61,24 +61,27 @@ static gint latin_key_group = -1;
  * Determine key group of Latin layout
  * @return Latin key group
  */
-static gint get_latin_key_group(void)
+static gint find_latin_key_group(void)
 {
 	gint result = 0;
 	GArray *group_keys_count = g_array_new(FALSE, TRUE, sizeof(gint));
 
 	// count all key groups for Latin alphabet
-	for (guint keycode = GDK_KEY_a; keycode <= GDK_KEY_z; keycode++)
+	for (guint keyval = GDK_KEY_a; keyval <= GDK_KEY_z; keyval++)
 	{
 		GdkKeymapKey* keys;
 		gint n_keys;
-		if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), GDK_KEY_A, &keys, &n_keys))
+		if (gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(), keyval, &keys, &n_keys))
 		{
 			for (gint key = 0; key < n_keys; key++)
 			{
-				if (keys->group >= 0 && (guint) keys->group >= group_keys_count->len)
-					g_array_set_size(group_keys_count, keys->group + 1);
+				if (keys[key].group >= 0)
+				{
+					if ((guint) keys[key].group >= group_keys_count->len)
+						g_array_set_size(group_keys_count, keys[key].group + 1);
+					g_array_index(group_keys_count, gint, keys[key].group)++;
+				}
 			}
-			g_array_index(group_keys_count, gint, keys->group)++;
 			g_free(keys);
 		}
 	}
@@ -87,10 +90,12 @@ static gint get_latin_key_group(void)
 	int max_keys_count = 0;
 	for (guint group = 0; group < group_keys_count->len; group++)
 	{
-		if (g_array_index(group_keys_count, gint, group) > max_keys_count)
+		int keys_count = g_array_index(group_keys_count, gint, group);
+		PRINT_DEBUG("group %d has %d Latin keys\n", group, keys_count);
+		if (keys_count > max_keys_count)
 		{
 			result = group;
-			max_keys_count = g_array_index(group_keys_count, gint, group);
+			max_keys_count = keys_count;
 		}
 	}
 
@@ -102,7 +107,7 @@ static gint get_latin_key_group(void)
 static void on_gdk_keys_changed(GdkKeymap *keymap, gpointer user_data)
 {
 	PRINT_DEBUG("on_gdk_keys_changed\n");
-	latin_key_group = get_latin_key_group();
+	latin_key_group = find_latin_key_group();
 	PRINT_DEBUG("Latin key group is %d\n", latin_key_group);
 }
 
@@ -115,7 +120,7 @@ static void key_events_hook(GdkEvent *event, gpointer data)
 	{
 		if (latin_key_group == -1)
 		{
-			latin_key_group = get_latin_key_group();
+			latin_key_group = find_latin_key_group();
 			PRINT_DEBUG("Latin key group is %d\n", latin_key_group);
 			g_signal_connect(G_OBJECT(gdk_keymap_get_default()), "keys-changed", G_CALLBACK(on_gdk_keys_changed), NULL);
 		}
