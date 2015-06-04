@@ -128,14 +128,15 @@ static void key_events_hook(GdkEvent *event, gpointer data)
 				&& event->key.group != latin_key_group)
 		{
 			PRINT_DEBUG("non-Latin hotkey event with keyval=%d\n", event->key.keyval);
+			GdkKeymap *keymap = gdk_keymap_get_default();
 			GdkKeymapKey *keys;
 			guint *keyvals;
 			gint n_entries;
 			gint level;
 
-			if (gdk_keymap_translate_keyboard_state(NULL, event->key.hardware_keycode, event->key.state,
+			if (gdk_keymap_translate_keyboard_state(keymap, event->key.hardware_keycode, event->key.state,
 					event->key.group, NULL, NULL, &level, NULL)
-					&& gdk_keymap_get_entries_for_keycode(NULL, event->key.hardware_keycode,
+					&& gdk_keymap_get_entries_for_keycode(keymap, event->key.hardware_keycode,
 							&keys, &keyvals, &n_entries))
 			{
 				gint i;
