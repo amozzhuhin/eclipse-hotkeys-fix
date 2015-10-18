@@ -56,3 +56,9 @@ Usage
 ===================
 
 Copy `lib/libeclipse-hotkeys-fix.so` and `eclipse.sh` from build directory into root directory of Eclipse distribution. Now you can run Eclipse with `eclipse.sh`.
+
+Alternatives
+===================
+
+* [LESCH](http://sourceforge.net/projects/lesch/)
+* [SWT patch](https://bugs.eclipse.org/bugs/attachment.cgi?id=239557)
