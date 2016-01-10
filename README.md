@@ -9,8 +9,10 @@ This project provide a shared library that temporary fixes this problem.
 Tested on `Eclipse CDT`, `Eclipse JEE`, `Apache Directory Studio`, and might work with any other GTK+ application
 with same bug.
 
-Install
+Build
 ===================
+
+* Check GTK version used by Eclipse - https://www.eclipse.org/swt/faq.php#gtkversion
 
 * Install build tools (Ubuntu/Debian)
 ```
